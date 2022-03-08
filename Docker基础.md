@@ -219,15 +219,17 @@ REDHAT_SUPPORT_PRODUCT_VERSION="7"
     
     yum-config-manager \
     --add-repo \
-   https://mirrors.tuna.tsinghua.edu.cn/docker-ce/linux/centos/docker-ce.repo    # 建议使用阿里云或者其他国内镜像
+   https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo    # 建议使用阿里云或者其他国内镜像
 # 、更新yum软件包索引    
  yum makecache fast
 
 # 4、安装dokcer相关的额 docker-ce 社区    ee企业版
   yum install docker-ce docker-ce-cli containerd.io
 
-# 5、启动docker
+# 5、启动docker  
 systemctl start docker
+# 开机自启动
+systemctl enable docker
 # 6、使用docker version 验证安装成功
 [root@yjy100 /]#  docker version
 Client: Docker Engine - Community
@@ -271,6 +273,16 @@ REPOSITORY            TAG       IMAGE ID       CREATED        SIZE
 hello-world           latest    d1165f221234   4 months ago   13.3kB
 ```
 
+## 通过脚本进行安装docker
+
+```shell
+# https://get.docker.com/  脚本下载的地址
+# curl -fsSL get.docker.com -o get-docker.sh  下载到本地
+# sh get-docker.sh	运行脚本
+```
+
+
+
 了解：卸载Docker
 
 ```shell
@@ -296,14 +308,15 @@ rm -rf /var/1ib/docker
 3、配置使用
 
 ```shell
-sudo mkdir -p /etc/docker
-sudo tee /etc/docker/daemon.json <<-'EOF'
+ mkdir -p /etc/docker
+ vim /etc/docker/daemon.json
+daemon.json文件
 {
   "registry-mirrors": ["https://ovvphjcn.mirror.aliyuncs.com"]
 }
-EOF
-sudo systemctl daemon-reload
-sudo systemctl restart docker
+
+systemctl daemon-reload 
+systemctl restart docker
 ```
 
 ## 回顾HelloWorld流程
@@ -344,6 +357,10 @@ DockerServer接收到Docker-Client的指令,就会执行这个命令!
 docker version     #显示docker版本信息
 docker info		   #显示docker的系统信息，包括镜像和容器的数量
 docker 命令 --help  #帮助命令
+docker container   #后面可以更所有的命令 
+	比如：docker container run  # 运行一个容器
+		 docker container ls # 显示正在运行的容器
+# 注意：docker container run 等价于 docker run 可以不加container
 ```
 
 ## 镜像命令
@@ -428,7 +445,6 @@ aeb6b16ce012: Pull complete
 Digest: sha256:be70d18aedc37927293e7947c8de41ae6490ecd4c79df1db40d1b5b5af7d9596
 Status: Downloaded newer image for mysql:5.7
 docker.io/library/mysql:5.7
-
 ```
 
 **docker rmi**  删除镜像！
@@ -445,12 +461,22 @@ Deleted: sha256:70f18560bbf492ddb2eadbc511c58c4d01e51e8f5af237e3dbb319632f16335b
 # docker rmi -f 镜像id  # 删除指定的镜像
 # docker rmi -f 镜像id 镜像id 镜像id 镜像id  # 删除多个镜像
 # docker rmi -f $(docker images -aq) # 删除全部镜像
-
+# 如果镜像的id名称相同的话，通过
+# docker rmi -f 镜像名:tag
 ```
 
+**docker tag 给镜像打标签**
 
-
-
+```shell
+[root@dongdong html]# docker tag 4037a5562b03 docker.io/dongdongaini/nginx:v1.12.2
+# 语法：docker tag 镜像id 远程仓库地址/注册仓库id/名字:tag
+[root@dongdong html]# docker images
+REPOSITORY           TAG       IMAGE ID       CREATED        SIZE
+dongdongaini/nginx   curl      0353445c85ca   42 hours ago   179MB
+mysql                latest    ecac195d15af   2 weeks ago    516MB
+dongdongaini/nginx   v1.12.2   4037a5562b03   3 years ago    108MB
+nginx                1.12.2    4037a5562b03   3 years ago    108MB
+```
 
 ## 容器命令
 
@@ -460,20 +486,22 @@ Deleted: sha256:70f18560bbf492ddb2eadbc511c58c4d01e51e8f5af237e3dbb319632f16335b
 docker pull centos  # 拉取centos镜像文件
 ```
 
-容器并启动
+**容器并启动**
 
 ```shell
 docker run [可选参数] image
 
 # 参数说明
 --name="Name"   容器的名字 用来区分容器
--d              后台方式运行
+-d （detached）  后台方式运行，非交互式
+
+--rm			用完即删除
 -it	            使用交互方式运行，进入容器查看内容
 -p              指定容器的端口 -p 8080:8080
 	-p ip:主机端口：容器端口
-	-p 主机端口:容器端口  (常用)
+	-p 主机（容器外）端口:容器内端口  (常用)
 	-p 容器端口
--P              随机指定端口
+-P              随机指定主机端口（容器外）
 
 
 
@@ -487,6 +515,15 @@ bin  dev  etc  home  lib  lib64  lost+found  media  mnt  opt  proc  root  run  s
 exit
 [root@yjy100 /]# ls
 bin  boot  dev  etc  home  lib  lib64  lost+found  media  mnt  newdisk  opt  proc  root  run  sbin  srv  sys  tmp  usr  var  www
+```
+
+**attached和detached模式**
+
+```shell
+docker run nginx # 在windows下的命令行 按住Ctrl + c就不会停止nginx服务  这就是attached模式
+docker run nginx # 在Linux下的命令行  按住Ctrl + c就会停止nginx服务
+# 如果不想使用attached模式的化可以 用-d(detached)命令 如：docker run -d nginx  就是进入到了datached模式
+# 如果想从datached模式切换到attached模式可以使用 docker attach 容器id 如果输入Ctrl + c就会把当前正在运行的容器给停掉
 ```
 
 **列出所有的运行的容器**
@@ -519,7 +556,6 @@ c7fba1ff4ea4
 25c78354b268
 fb4c80015bc2
 30059b8eed31
-
 ```
 
 **退出容器**
@@ -544,6 +580,13 @@ docker start 容器id      # 启动容器
 docker restart 容器id    # 重启容器
 docker stop 容器id       # 停止当前正在运行的容器
 docker kill 容器id       # 强制停止当前容器
+```
+
+**load与save**
+
+```shell
+docker load -i 文件.tar   #docker load用来载入镜像包
+docker save 镜像 > new_centos.tar #docker save保存的是镜像（image）
 ```
 
 ## 常用其他命令
@@ -1047,7 +1090,7 @@ Mysql，容器删了，删库跑路 ==需求：Mysql数据可以存储在本地=
 > 方式一：直接使用命令来挂载 -v	
 
 ```shell
-docker run -it -v 主机目录:容器目录
+docker run -it -v 主机（容器外）目录:容器内目录
 
 # 测试 
 [root@yjy100 home]# docker run -it -v /home/text:/home centos /bin/bash
@@ -1074,6 +1117,37 @@ docker run -it -v 主机目录:容器目录
 ![image](image\image-20210725225337289.png)
 
 **好处：我们以后修改只需要在本地修改即可，容器内会自动同步！**
+
+
+
+## 传递环境变量
+
+```shell
+docker run -e 环境变量key=环境变量value
+
+
+[root@dongdong ~]# docker run --rm -e E_os=123457 nginx:1.12.2 printenv
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+HOSTNAME=d7505db4f036
+E_os=123457
+NGINX_VERSION=1.12.2-1~stretch
+NJS_VERSION=1.12.2.0.1.14-1~stretch
+HOME=/root
+```
+
+## 容器内安装软件（工具）
+
+```shell
+yum/apt-get/apt等
+
+tee /etc/apt/sources.list << EOF
+deb http://mirrors.163.com/debian/ jessie main non-free contrib
+deb http://mirrors.163.com/debian/ jessie-updates main non-free contrib
+EOF
+apt-get update
+```
+
+
 
 ## 具民和匿名挂载
 
@@ -1211,13 +1285,11 @@ dockerfile 是用来构建docker镜像的文件！命令参数脚本！
 
 4、docker push发布镜像( DockerHub、阿里云镜像仓库! )
 
-
-
 ## DockerFile构建过程
 
 **基础知识:**
 
-1、每个保留关键字(指令)都是必须是大写字母
+1、每个保留关键字(指令)都是必须是大写字母，命名用小写，（**尽管指令大小写不敏感，但是还是强烈建议指令用大写**）
 
 2、执行从上到下顺序执行
 
@@ -1242,6 +1314,7 @@ FROM                # 基础镜像 ，一切从这里开始搭建
 MAINTAINER          # 镜像是谁写的，姓名+邮箱
 RUN					# 镜像构建的时候需要运行的命令
 ADD					# 步骤: tomcat镜像， 这个tomcat压缩包!添加内容
+USER				# 定义你使用哪个用户
 WORKDIR				# 镜像的工作目录
 VOL UME				# 挂载的目录
 EXPOSE				# 保留端口配置
@@ -1277,6 +1350,8 @@ CMD echo "-----end-----"
 CMD /bin/bash
 # 通过这个文件来构建镜像
 #命令docker build -f dockerfile 文件路径 -t 镜像名: [tag]
+# 注意：文件路径.表示在当前目录构建镜像
+# 注意：如果编写dockerfile文件开头是以大写D开头的在构建镜像的时候就不需要加-f 这个参数官方也规定编写dockerfile文件首字母大写
 ```
 
 Successfully built fc71ab59d268
